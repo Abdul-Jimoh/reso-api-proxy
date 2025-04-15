@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const qs = require('querystring');
 
 exports.handler = async function (event) {
     // Setting CORS headers to allow cross-origin requests from any domain
@@ -16,47 +17,47 @@ exports.handler = async function (event) {
 
     // Extract query parameters from the request URL
     const params = event.queryStringParameters || {};
-
-    // Default to 'Property' resource if none specified
-    const resource = params.resource || 'Property';
-
-    // Build the base endpoint URL
-    let endpoint = `https://query.ampre.ca/odata/${resource}`;
-
-    // Add pagination parameter (default to 10 results)
-    if (params.top) {
-        endpoint += `?$top=${params.top}`;
-    } else {
-        endpoint += '?$top=10';
-    }
-
-    // Add filtering parameters if provided
-    if (params.filter) {
-        endpoint += `&$filter=${encodeURIComponent(params.filter)}`;
-    }
-
-    // Add sorting parameters if provided
-    if (params.orderby) {
-        endpoint += `&$orderby=${encodeURIComponent(params.orderby)}`;
-    }
-
-    // Add relationship expansion if provided
-    if (params.expand) {
-        endpoint += `&$expand=${encodeURIComponent(params.expand)}`;
-    }
+    
+    // Get city parameter (default to 'Oakville' if not provided)
+    const city = params.city || 'Oakville';
 
     try {
-        // Make the authenticated request to the RESO API
-        // Using environment variable for security
-        const response = await fetch(endpoint, {
+        // First, get an access token
+        const tokenData = qs.stringify({
+            grant_type: 'client_credentials',
+            client_id: process.env.REALTOR_CLIENT_ID || 'hoYRuPpznnXKuroH4jCogKaa',
+            client_secret: process.env.REALTOR_CLIENT_SECRET || 'jwm634mpqMVDaDRsaDW6vysm',
+            scope: 'DDFApi_Read',
+        });
+
+        const tokenResponse = await fetch('https://identity.crea.ca/connect/token', {
+            method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.RESO_API_TOKEN}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: tokenData,
+        });
+
+        if (!tokenResponse.ok) {
+            throw new Error(`Authentication failed: ${tokenResponse.status}`);
+        }
+
+        const tokenResult = await tokenResponse.json();
+        const accessToken = tokenResult.access_token;
+
+        // Build the property query URL with the city parameter
+        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=City eq '${city}' and StandardStatus eq 'Active' and ListPrice ne null and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc`;
+
+        // Make the authenticated request to the Realtor API
+        const propertyResponse = await fetch(endpoint, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
                 'Accept': 'application/json'
             }
         });
 
         // Parse the JSON response
-        const data = await response.json();
+        const data = await propertyResponse.json();
 
         // Return successful response to the client
         return {
@@ -72,7 +73,7 @@ exports.handler = async function (event) {
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Failed to fetch data from RESO API' })
+            body: JSON.stringify({ error: 'Failed to fetch data from Realtor API: ' + error.message })
         };
     }
 };
