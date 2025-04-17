@@ -111,7 +111,7 @@ async function getPropertyDetails(listingKey, headers) {
 
         // Build the property query URL with the ListingKey parameter
         // Expand the $select to include more detailed information
-        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=ListingKey eq '${listingKey}'&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,PostalCode,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp,PublicRemarks,Parking,InteriorFeatures,ExteriorFeatures,Rooms,BuildingAreaTotal,LotSizeArea,LotSizeSquareFeet,StreetName,StreetNumber,TaxAnnualAmount,WaterBodyName,Appliances,LotFeatures,YearBuilt,PropertyAttachment&$expand=Rooms,Media,Office,AssociationAmenities`;
+        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=ListingKey eq '${listingKey}'`;
 
         // Make the authenticated request to the Realtor API
         const propertyResponse = await fetch(endpoint, {
