@@ -18,7 +18,12 @@ exports.handler = async function (event) {
     // Extract query parameters from the request URL
     const params = event.queryStringParameters || {};
     
-    // Get city parameter (default to 'Oakville' if not provided)
+    // Check if this is a request for a single property
+    if (params.listingKey) {
+        return await getPropertyDetails(params.listingKey, headers);
+    }
+    
+    // Otherwise, this is a request for multiple properties by city
     const city = params.city || 'Oakville';
 
     try {
@@ -77,3 +82,63 @@ exports.handler = async function (event) {
         };
     }
 };
+
+// Function to get detailed property information by ListingKey
+async function getPropertyDetails(listingKey, headers) {
+    try {
+        // Get access token
+        const tokenData = qs.stringify({
+            grant_type: 'client_credentials',
+            client_id: process.env.REALTOR_CLIENT_ID || 'hoYRuPpznnXKuroH4jCogKaa',
+            client_secret: process.env.REALTOR_CLIENT_SECRET || 'jwm634mpqMVDaDRsaDW6vysm',
+            scope: 'DDFApi_Read',
+        });
+
+        const tokenResponse = await fetch('https://identity.crea.ca/connect/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: tokenData,
+        });
+
+        if (!tokenResponse.ok) {
+            throw new Error(`Authentication failed: ${tokenResponse.status}`);
+        }
+
+        const tokenResult = await tokenResponse.json();
+        const accessToken = tokenResult.access_token;
+
+        // Build the property query URL with the ListingKey parameter
+        // Expand the $select to include more detailed information
+        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=ListingKey eq '${listingKey}'&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,PostalCode,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp,PublicRemarks,Parking,InteriorFeatures,ExteriorFeatures,Rooms,BuildingAreaTotal,LotSizeArea,LotSizeSquareFeet,StreetName,StreetNumber,TaxAnnualAmount,WaterBodyName,Appliances,LotFeatures,YearBuilt,PropertyAttachment&$expand=Rooms,Media,Office,AssociationAmenities`;
+
+        // Make the authenticated request to the Realtor API
+        const propertyResponse = await fetch(endpoint, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        // Parse the JSON response
+        const data = await propertyResponse.json();
+
+        // Return successful response to the client
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(data)
+        };
+    } catch (error) {
+        // Log the error server-side
+        console.log('Error fetching property details:', error);
+
+        // Return error response to the client
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Failed to fetch property details: ' + error.message })
+        };
+    }
+}
