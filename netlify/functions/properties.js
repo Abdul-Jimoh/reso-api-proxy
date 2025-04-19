@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 const qs = require('querystring');
 
 exports.handler = async function (event) {
-    // Setting CORS headers to allow cross-origin requests from any domain
+    // Setting CORS headers
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -10,24 +10,24 @@ exports.handler = async function (event) {
         'Content-Type': 'application/json'
     };
 
-    // Handle preflight OPTIONS requests for CORS
+    // Handle preflight OPTIONS requests
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers };
     }
 
-    // Extract query parameters from the request URL
+    // Extract query parameters
     const params = event.queryStringParameters || {};
-    
+
     // Check if this is a request for a single property
     if (params.listingKey) {
         return await getPropertyDetails(params.listingKey, headers);
     }
-    
-    // Otherwise, this is a request for multiple properties by city
+
+    // Get city parameter (default to 'Oakville' if not provided)
     const city = params.city || 'Oakville';
 
     try {
-        // First, get an access token
+        // Get access token
         const tokenData = qs.stringify({
             grant_type: 'client_credentials',
             client_id: process.env.REALTOR_CLIENT_ID || 'hoYRuPpznnXKuroH4jCogKaa',
@@ -50,8 +50,75 @@ exports.handler = async function (event) {
         const tokenResult = await tokenResponse.json();
         const accessToken = tokenResult.access_token;
 
-        // Build the property query URL with the city parameter
-        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=City eq '${city}' and StandardStatus eq 'Active' and ListPrice ne null and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc`;
+        // Build the filter string with additional parameters
+        let filterString = `City eq '${city}'`;
+
+        // Add transaction type filter
+        if (params.transactionType) {
+            if (params.transactionType === 'For Sale') {
+                filterString += ` and StandardStatus eq 'Active' and ListPrice ne null`;
+            } else if (params.transactionType === 'For Rent') {
+                filterString += ` and StandardStatus eq 'Active' and TotalActualRent ne null`;
+            }
+        } else {
+            // Default to just active listings if no transaction type specified
+            filterString += ` and StandardStatus eq 'Active' and ListPrice ne null`;
+        }
+
+        // Add bedroom filter - handle exact vs "plus" values
+        if (params.bedrooms && params.bedrooms !== 'Any') {
+            // Check if it's a "plus" format (like "2+")
+            if (params.bedrooms.includes('+')) {
+                const minBeds = parseInt(params.bedrooms);
+                filterString += ` and BedroomsTotal ge ${minBeds}`;
+            } else {
+                // Exact match
+                filterString += ` and BedroomsTotal eq ${params.bedrooms}`;
+            }
+        }
+
+        // Add bathroom filter - handle exact vs "plus" values
+        if (params.bathrooms && params.bathrooms !== 'Any') {
+            // Check if it's a "plus" format (like "2+")
+            if (params.bathrooms.includes('+')) {
+                const minBaths = parseInt(params.bathrooms);
+                filterString += ` and BathroomsTotalInteger ge ${minBaths}`;
+            } else {
+                // Exact match
+                filterString += ` and BathroomsTotalInteger eq ${params.bathrooms}`;
+            }
+        }
+
+        // Add min price filter if provided
+        if (params.minPrice && params.minPrice !== '0.00') {
+            filterString += ` and ListPrice ge ${params.minPrice}`;
+        }
+
+        // Add max price filter if provided
+        if (params.maxPrice && params.maxPrice !== '0.00' && params.maxPrice !== '0') {
+            filterString += ` and ListPrice le ${params.maxPrice}`;
+        }
+
+        // Add property type filter if provided
+        if (params.propertyType && params.propertyType !== 'Any') {
+            filterString += ` and PropertySubType eq '${params.propertyType}'`;
+        }
+
+        // Add building type filter if provided (if applicable in your data)
+        if (params.buildingType && params.buildingType !== 'Any') {
+            filterString += ` and CommonInterest eq '${params.buildingType}'`;
+        }
+
+        // Add garage filter if provided
+        if (params.garage && params.garage !== 'Any') {
+            filterString += ` and ParkingTotal ge ${params.garage}`;
+        }
+
+        // Default time constraint
+        filterString += ` and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z`;
+
+        // Build the property query URL with all filters
+        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc`;
 
         // Make the authenticated request to the Realtor API
         const propertyResponse = await fetch(endpoint, {
@@ -82,6 +149,7 @@ exports.handler = async function (event) {
         };
     }
 };
+
 
 // Function to get detailed property information by ListingKey
 async function getPropertyDetails(listingKey, headers) {
