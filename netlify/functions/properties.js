@@ -73,7 +73,7 @@ exports.handler = async function (event) {
                 filterString += ` and BedroomsTotal ge ${minBeds}`;
             } else {
                 // Exact match
-                filterString += ` and BedroomsTotal eq ${params.bedrooms}`;
+                filterString += ` and BedroomsTotal eq ${parseInt(params.bedrooms)}`;
             }
         }
 
@@ -85,7 +85,7 @@ exports.handler = async function (event) {
                 filterString += ` and BathroomsTotalInteger ge ${minBaths}`;
             } else {
                 // Exact match
-                filterString += ` and BathroomsTotalInteger eq ${params.bathrooms}`;
+                filterString += ` and BathroomsTotalInteger eq ${parseInt(params.bathrooms)}`;
             }
         }
 
