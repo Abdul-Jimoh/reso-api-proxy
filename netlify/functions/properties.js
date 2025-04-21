@@ -24,7 +24,7 @@ exports.handler = async function (event) {
     }
 
     // Get city parameter (default to 'Oakville' if not provided)
-    const city = params.city || 'Oakville';
+    const city = params.city;
 
     try {
         // Get access token
