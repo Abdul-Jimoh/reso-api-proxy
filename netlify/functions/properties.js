@@ -17,6 +17,7 @@ exports.handler = async function (event) {
 
     // Extract query parameters
     const params = event.queryStringParameters || {};
+    const limit = params.limit ? parseInt(params.limit) : null;
 
     // Check if this is a request for a single property
     if (params.listingKey) {
@@ -24,7 +25,7 @@ exports.handler = async function (event) {
     }
 
     // Get city parameter (default to 'Oakville' if not provided)
-    const city = params.city;
+    const city = params.city || 'Oakville';
 
     try {
         // Get access token
@@ -130,6 +131,11 @@ exports.handler = async function (event) {
 
         // Parse the JSON response
         const data = await propertyResponse.json();
+
+        // Apply the limit if provided
+        if (limit && data.value && Array.isArray(data.value)) {
+            data.value = data.value.slice(0, limit);
+        }
 
         // Return successful response to the client
         return {
