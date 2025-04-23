@@ -24,8 +24,8 @@ exports.handler = async function (event) {
         return await getPropertyDetails(params.listingKey, headers);
     }
 
-    // Get city parameter (default to 'Oakville' if not provided)
-    const city = params.city || 'Oakville';
+    // Get city parameter
+    const city = params.city;
 
     try {
         // Get access token
@@ -52,18 +52,26 @@ exports.handler = async function (event) {
         const accessToken = tokenResult.access_token;
 
         // Build the filter string with additional parameters
-        let filterString = `City eq '${city}'`;
+        let filterString = '';
+
+        // Handle city filter
+        if (city) {
+            filterString = `City eq '${city}'`;
+        } else {
+            // No city filter - this will return properties from all cities
+            filterString = `StandardStatus eq 'Active'`;
+        }
 
         // Add transaction type filter
         if (params.transactionType) {
             if (params.transactionType === 'For Sale') {
-                filterString += ` and StandardStatus eq 'Active' and ListPrice ne null`;
+                filterString += ` and ListPrice ne null`;
             } else if (params.transactionType === 'For Rent') {
-                filterString += ` and StandardStatus eq 'Active' and TotalActualRent ne null`;
+                filterString += ` and TotalActualRent ne null`;
             }
         } else {
             // Default to just active listings if no transaction type specified
-            filterString += ` and StandardStatus eq 'Active' and ListPrice ne null`;
+            filterString += ` and ListPrice ne null`;
         }
 
         // Add bedroom filter - handle exact vs "plus" values
