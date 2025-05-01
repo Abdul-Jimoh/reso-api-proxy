@@ -62,6 +62,17 @@ exports.handler = async function (event) {
             filterString = `StandardStatus eq 'Active'`;
         }
 
+        // Add coordinate-based filtering if coordinates are provided
+        if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
+            // If we have both city and coordinates, use AND to combine them
+            if (filterString) {
+                filterString += ` and `;
+            }
+
+            // Add the bounding box filter
+            filterString += `Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
+        }
+
         // Add transaction type filter
         if (params.transactionType) {
             if (params.transactionType === 'For Sale') {
