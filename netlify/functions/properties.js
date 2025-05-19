@@ -135,10 +135,10 @@ exports.handler = async function (event) {
         }
 
         // Default time constraint
-        // filterString += ` and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z`;
+        filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
 
         // Build the property query URL with all filters
-        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc`;
+        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc&$top=100`;
 
         // Make the authenticated request to the Realtor API
         const propertyResponse = await fetch(endpoint, {
