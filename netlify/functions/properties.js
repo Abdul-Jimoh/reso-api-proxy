@@ -135,7 +135,7 @@ exports.handler = async function (event) {
         }
 
         // Default time constraint
-        filterString += ` and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z`;
+        // filterString += ` and OriginalEntryTimestamp gt 2025-04-10T09:50:00Z`;
 
         // Build the property query URL with all filters
         const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc`;
