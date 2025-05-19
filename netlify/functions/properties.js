@@ -137,38 +137,82 @@ exports.handler = async function (event) {
         // Default time constraint
         filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
 
+        let allFetchedProperties = [];
+
         // Build the property query URL with all filters
-        const endpoint = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc&$top=100`;
+        let currentDdfApiUrl = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp&$count=true&$orderby=OriginalEntryTimestamp desc&$top=100`;
 
-        // Make the authenticated request to the Realtor API
-        const propertyResponse = await fetch(endpoint, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Accept': 'application/json'
+        let totalDDFCountFromApi = 0;
+        let iterationCount = 0;
+        const MAX_ITERATIONS = 5;
+
+        while (currentDdfApiUrl && iterationCount < MAX_ITERATIONS) {
+            iterationCount++;
+
+            const propertyResponse = await fetch(currentDdfApiUrl, { 
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!propertyResponse.ok) {
+                const errorText = await propertyResponse.text();
+                console.error(`DDF API call failed for ${currentDdfApiUrl}: ${propertyResponse.status} - ${errorText}`);
+                if (iterationCount === 1) {
+                    throw new Error(`DDF API request failed on first page: ${propertyResponse.status}`);
+                }
+                console.warn(`Stopping DDF fetch loop after ${iterationCount - 1} successful pages due to error on page ${iterationCount}.`);
+                break;
             }
-        });
+            const pageData = await propertyResponse.json(); 
 
-        // Parse the JSON response
-        const data = await propertyResponse.json();
+            if (pageData.value && pageData.value.length > 0) {
+                allFetchedProperties.push(...pageData.value);
+            }
 
-        // Apply the limit if provided
-        if (limit && data.value && Array.isArray(data.value)) {
-            data.value = data.value.slice(0, limit);
+            // Get total count from the first response that includes it
+            if (iterationCount === 1 && pageData['@odata.count']) {
+                totalDDFCountFromApi = parseInt(pageData['@odata.count'], 10);
+            }
+
+            // Logic to stop the loop
+            if (totalDDFCountFromApi > 0 && allFetchedProperties.length >= totalDDFCountFromApi) {
+                currentDdfApiUrl = null;
+            } else {
+                currentDdfApiUrl = pageData['@odata.nextLink']; 
+                if (!currentDdfApiUrl) {
+                    console.log(`No nextLink provided by DDF after page ${iterationCount}. Fetched ${allFetchedProperties.length} properties.`);
+                }
+            }
         }
 
-        // Return successful response to the client
+        if (iterationCount >= MAX_ITERATIONS && currentDdfApiUrl) {
+            console.warn(`Reached MAX_ITERATIONS (${MAX_ITERATIONS}) but there might still be more DDF pages. Next link was: ${currentDdfApiUrl}`);
+        }
+
+        let dataForClient = {
+            value: allFetchedProperties,
+            "@odata.count": totalDDFCountFromApi > 0 ? totalDDFCountFromApi : allFetchedProperties.length
+        };
+
+        if (limit && dataForClient.value && Array.isArray(dataForClient.value) && limit < dataForClient.value.length) {
+            dataForClient.value = dataForClient.value.slice(0, limit);
+        }
+
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                value: dataForClient.value,
+                totalCount: dataForClient["@odata.count"] 
+            })
         };
-    } catch (error) {
-        // Log the error server-side
-        console.log('Error:', error);
 
-        // Return error response to the client
+    } catch (error) {
+        console.error('Error in exports.handler:', error);
         return {
-            statusCode: 500,
+            statusCode: 500, 
             headers,
             body: JSON.stringify({ error: 'Failed to fetch data from Realtor API: ' + error.message })
         };
