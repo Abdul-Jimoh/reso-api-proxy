@@ -134,6 +134,12 @@ exports.handler = async function (event) {
             filterString += ` and ParkingTotal ge ${params.garage}`;
         }
 
+        // Add neighbourhood paraam if provided 
+        if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
+            const neighborhoodName = params.neighborhood.replace(/'/g, "''"); 
+            filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
+        }
+
         // Default time constraint
         filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
 
