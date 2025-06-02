@@ -150,7 +150,7 @@ exports.handler = async function (event) {
 
         let totalDDFCountFromApi = 0;
         let iterationCount = 0;
-        const MAX_ITERATIONS = 1;
+        const MAX_ITERATIONS = 3;
 
         while (currentDdfApiUrl && iterationCount < MAX_ITERATIONS) {
             iterationCount++;
