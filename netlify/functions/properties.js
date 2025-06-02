@@ -147,10 +147,10 @@ exports.handler = async function (event) {
 
         // Build the property query URL with all filters
         let currentDdfApiUrl = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp,SubdivisionName&$count=true&$orderby=OriginalEntryTimestamp desc&$top=100`;
-        
+
         let totalDDFCountFromApi = 0;
         let iterationCount = 0;
-        const MAX_ITERATIONS = 5;
+        const MAX_ITERATIONS = 4;
 
         while (currentDdfApiUrl && iterationCount < MAX_ITERATIONS) {
             iterationCount++;
