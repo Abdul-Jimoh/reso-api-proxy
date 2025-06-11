@@ -57,7 +57,7 @@ exports.handler = async function (event) {
         if (params.featuredOfficeKey) {
             // This is a special request for featured listings from a specific office
             filterString = `ListOfficeKey eq '${params.featuredOfficeKey.replace(/'/g, "''")}'`;
-            filterString += ` and StandardStatus eq 'Active'`;
+            // filterString += ` and StandardStatus eq 'Active'`;
         } else {
             // Handle city filter
             if (city) {
