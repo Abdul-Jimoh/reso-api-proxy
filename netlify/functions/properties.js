@@ -54,94 +54,99 @@ exports.handler = async function (event) {
         // Build the filter string with additional parameters
         let filterString = '';
 
-        // Handle city filter
-        if (city) {
-            filterString = `City eq '${city}'`;
+        if (params.featuredOfficeKey) {
+            // This is a special request for featured listings from a specific office
+            filterString = `ListOfficeKey eq '${params.featuredOfficeKey.replace(/'/g, "''")}'`;
+            filterString += ` and StandardStatus eq 'Active'`;
         } else {
-            // No city filter - this will return properties from all cities
-            filterString = `StandardStatus eq 'Active'`;
-        }
-
-        // Add coordinate-based filtering if coordinates are provided
-        if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
-            // If we have both city and coordinates, use AND to combine them
-            if (filterString) {
-                filterString += ` and `;
+            // Handle city filter
+            if (city) {
+                filterString = `City eq '${city}'`;
+            } else {
+                // No city filter - this will return properties from all cities
+                filterString = `StandardStatus eq 'Active'`;
             }
 
-            // Add the bounding box filter
-            filterString += `Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
-        }
+            // Add coordinate-based filtering if coordinates are provided
+            if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
+                // If we have both city and coordinates, use AND to combine them
+                if (filterString) {
+                    filterString += ` and `;
+                }
 
-        // Add transaction type filter
-        if (params.transactionType) {
-            if (params.transactionType === 'For Sale') {
+                // Add the bounding box filter
+                filterString += `Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
+            }
+
+            // Add transaction type filter
+            if (params.transactionType) {
+                if (params.transactionType === 'For Sale') {
+                    filterString += ` and ListPrice ne null`;
+                } else if (params.transactionType === 'For Rent') {
+                    filterString += ` and TotalActualRent ne null`;
+                }
+            } else {
+                // Default to just active listings if no transaction type specified
                 filterString += ` and ListPrice ne null`;
-            } else if (params.transactionType === 'For Rent') {
-                filterString += ` and TotalActualRent ne null`;
             }
-        } else {
-            // Default to just active listings if no transaction type specified
-            filterString += ` and ListPrice ne null`;
-        }
 
-        // Add bedroom filter - handle exact vs "plus" values
-        if (params.bedrooms && params.bedrooms !== 'Any') {
-            // Check if it's a "plus" format (like "2+")
-            if (params.bedrooms.includes('+')) {
-                const minBeds = parseInt(params.bedrooms);
-                filterString += ` and BedroomsTotal ge ${minBeds}`;
-            } else {
-                // Exact match
-                filterString += ` and BedroomsTotal eq ${parseInt(params.bedrooms)}`;
+            // Add bedroom filter - handle exact vs "plus" values
+            if (params.bedrooms && params.bedrooms !== 'Any') {
+                // Check if it's a "plus" format (like "2+")
+                if (params.bedrooms.includes('+')) {
+                    const minBeds = parseInt(params.bedrooms);
+                    filterString += ` and BedroomsTotal ge ${minBeds}`;
+                } else {
+                    // Exact match
+                    filterString += ` and BedroomsTotal eq ${parseInt(params.bedrooms)}`;
+                }
             }
-        }
 
-        // Add bathroom filter - handle exact vs "plus" values
-        if (params.bathrooms && params.bathrooms !== 'Any') {
-            // Check if it's a "plus" format (like "2+")
-            if (params.bathrooms.includes('+')) {
-                const minBaths = parseInt(params.bathrooms);
-                filterString += ` and BathroomsTotalInteger ge ${minBaths}`;
-            } else {
-                // Exact match
-                filterString += ` and BathroomsTotalInteger eq ${parseInt(params.bathrooms)}`;
+            // Add bathroom filter - handle exact vs "plus" values
+            if (params.bathrooms && params.bathrooms !== 'Any') {
+                // Check if it's a "plus" format (like "2+")
+                if (params.bathrooms.includes('+')) {
+                    const minBaths = parseInt(params.bathrooms);
+                    filterString += ` and BathroomsTotalInteger ge ${minBaths}`;
+                } else {
+                    // Exact match
+                    filterString += ` and BathroomsTotalInteger eq ${parseInt(params.bathrooms)}`;
+                }
             }
+
+            // Add min price filter if provided
+            if (params.minPrice && params.minPrice !== '0.00') {
+                filterString += ` and ListPrice ge ${params.minPrice}`;
+            }
+
+            // Add max price filter if provided
+            if (params.maxPrice && params.maxPrice !== '0.00' && params.maxPrice !== '0') {
+                filterString += ` and ListPrice le ${params.maxPrice}`;
+            }
+
+            // Add property type filter if provided
+            if (params.propertyType && params.propertyType !== 'Any') {
+                filterString += ` and PropertySubType eq '${params.propertyType}'`;
+            }
+
+            // Add building type filter if provided (if applicable in your data)
+            if (params.buildingType && params.buildingType !== 'Any') {
+                filterString += ` and CommonInterest eq '${params.buildingType}'`;
+            }
+
+            // Add garage filter if provided
+            if (params.garage && params.garage !== 'Any') {
+                filterString += ` and ParkingTotal ge ${params.garage}`;
+            }
+
+            // Add neighbourhood paraam if provided 
+            if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
+                const neighborhoodName = params.neighborhood.replace(/'/g, "''");
+                filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
+            }
+            filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
         }
 
-        // Add min price filter if provided
-        if (params.minPrice && params.minPrice !== '0.00') {
-            filterString += ` and ListPrice ge ${params.minPrice}`;
-        }
-
-        // Add max price filter if provided
-        if (params.maxPrice && params.maxPrice !== '0.00' && params.maxPrice !== '0') {
-            filterString += ` and ListPrice le ${params.maxPrice}`;
-        }
-
-        // Add property type filter if provided
-        if (params.propertyType && params.propertyType !== 'Any') {
-            filterString += ` and PropertySubType eq '${params.propertyType}'`;
-        }
-
-        // Add building type filter if provided (if applicable in your data)
-        if (params.buildingType && params.buildingType !== 'Any') {
-            filterString += ` and CommonInterest eq '${params.buildingType}'`;
-        }
-
-        // Add garage filter if provided
-        if (params.garage && params.garage !== 'Any') {
-            filterString += ` and ParkingTotal ge ${params.garage}`;
-        }
-
-        // Add neighbourhood paraam if provided 
-        if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
-            const neighborhoodName = params.neighborhood.replace(/'/g, "''"); 
-            filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
-        }
-
-        // Default time constraint
-        filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
 
         let allFetchedProperties = [];
 
@@ -155,7 +160,7 @@ exports.handler = async function (event) {
         while (currentDdfApiUrl && iterationCount < MAX_ITERATIONS) {
             iterationCount++;
 
-            const propertyResponse = await fetch(currentDdfApiUrl, { 
+            const propertyResponse = await fetch(currentDdfApiUrl, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Accept': 'application/json'
@@ -171,7 +176,7 @@ exports.handler = async function (event) {
                 console.warn(`Stopping DDF fetch loop after ${iterationCount - 1} successful pages due to error on page ${iterationCount}.`);
                 break;
             }
-            const pageData = await propertyResponse.json(); 
+            const pageData = await propertyResponse.json();
 
             if (pageData.value && pageData.value.length > 0) {
                 allFetchedProperties.push(...pageData.value);
@@ -186,11 +191,23 @@ exports.handler = async function (event) {
             if (totalDDFCountFromApi > 0 && allFetchedProperties.length >= totalDDFCountFromApi) {
                 currentDdfApiUrl = null;
             } else {
-                currentDdfApiUrl = pageData['@odata.nextLink']; 
+                currentDdfApiUrl = pageData['@odata.nextLink'];
                 if (!currentDdfApiUrl) {
                     console.log(`No nextLink provided by DDF after page ${iterationCount}. Fetched ${allFetchedProperties.length} properties.`);
                 }
             }
+        }
+
+        // Sort the fetched properties if this was a featured request
+        const featuredAgentKey = params.featuredAgentKey;
+        if (params.featuredOfficeKey && featuredAgentKey && allFetchedProperties.length > 0) {
+            allFetchedProperties.sort((a, b) => {
+                const aIsAgent = a.ListAgentKey === featuredAgentKey;
+                const bIsAgent = b.ListAgentKey === featuredAgentKey;
+                if (aIsAgent && !bIsAgent) return -1; // 'a' (Chile Paul's) comes first
+                if (!aIsAgent && bIsAgent) return 1;  // 'b' comes first
+                return 0; // Maintain original order (by date) for all other listings
+            });
         }
 
         if (iterationCount >= MAX_ITERATIONS && currentDdfApiUrl) {
@@ -211,14 +228,14 @@ exports.handler = async function (event) {
             headers,
             body: JSON.stringify({
                 value: dataForClient.value,
-                totalCount: dataForClient["@odata.count"] 
+                totalCount: dataForClient["@odata.count"]
             })
         };
 
     } catch (error) {
         console.error('Error in exports.handler:', error);
         return {
-            statusCode: 500, 
+            statusCode: 500,
             headers,
             body: JSON.stringify({ error: 'Failed to fetch data from Realtor API: ' + error.message })
         };
