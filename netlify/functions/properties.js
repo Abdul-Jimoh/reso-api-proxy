@@ -55,38 +55,38 @@ exports.handler = async function (event) {
             } else {
                 filterString = `StandardStatus eq 'Active'`; // Default if no city
             }
-
-            // Append all other applicable filters
-            if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
-                if (filterString) filterString += ` and `;
-                filterString += `Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
-            }
-            if (params.transactionType) {
-                if (params.transactionType === 'For Sale') { filterString += ` and ListPrice ne null`; }
-                else if (params.transactionType === 'For Rent') { filterString += ` and TotalActualRent ne null`; }
-            } else {
-                filterString += ` and ListPrice ne null`;
-            }
-            if (params.bedrooms && params.bedrooms !== 'Any') {
-                if (params.bedrooms.includes('+')) { filterString += ` and BedroomsTotal ge ${parseInt(params.bedrooms)}`; }
-                else { filterString += ` and BedroomsTotal eq ${parseInt(params.bedrooms)}`; }
-            }
-            if (params.bathrooms && params.bathrooms !== 'Any') {
-                if (params.bathrooms.includes('+')) { filterString += ` and BathroomsTotalInteger ge ${parseInt(params.bathrooms)}`; }
-                else { filterString += ` and BathroomsTotalInteger eq ${parseInt(params.bathrooms)}`; }
-            }
-            if (params.minPrice && params.minPrice !== '0.00' && params.minPrice !== '0') { filterString += ` and ListPrice ge ${params.minPrice}`; }
-            if (params.maxPrice && params.maxPrice !== '0.00' && params.maxPrice !== '0') { filterString += ` and ListPrice le ${params.maxPrice}`; }
-            if (params.propertyType && params.propertyType !== 'Any') { filterString += ` and PropertySubType eq '${params.propertyType}'`; }
-            if (params.buildingType && params.buildingType !== 'Any') { filterString += ` and CommonInterest eq '${params.buildingType}'`; }
-            if (params.garage && params.garage !== 'Any') { filterString += ` and ParkingTotal ge ${params.garage}`; }
-            if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
-                const neighborhoodName = params.neighborhood.replace(/'/g, "''");
-                filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
-            }
-            // Date filter applies to all regular searches
-            filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
         }
+        // Append all other applicable filters
+        if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
+            if (filterString) filterString += ` and `;
+            filterString += `Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
+        }
+        if (params.transactionType) {
+            if (params.transactionType === 'For Sale') { filterString += ` and ListPrice ne null`; }
+            else if (params.transactionType === 'For Rent') { filterString += ` and TotalActualRent ne null`; }
+        } else {
+            filterString += ` and ListPrice ne null`;
+        }
+        if (params.bedrooms && params.bedrooms !== 'Any') {
+            if (params.bedrooms.includes('+')) { filterString += ` and BedroomsTotal ge ${parseInt(params.bedrooms)}`; }
+            else { filterString += ` and BedroomsTotal eq ${parseInt(params.bedrooms)}`; }
+        }
+        if (params.bathrooms && params.bathrooms !== 'Any') {
+            if (params.bathrooms.includes('+')) { filterString += ` and BathroomsTotalInteger ge ${parseInt(params.bathrooms)}`; }
+            else { filterString += ` and BathroomsTotalInteger eq ${parseInt(params.bathrooms)}`; }
+        }
+        if (params.minPrice && params.minPrice !== '0.00' && params.minPrice !== '0') { filterString += ` and ListPrice ge ${params.minPrice}`; }
+        if (params.maxPrice && params.maxPrice !== '0.00' && params.maxPrice !== '0') { filterString += ` and ListPrice le ${params.maxPrice}`; }
+        if (params.propertyType && params.propertyType !== 'Any') { filterString += ` and PropertySubType eq '${params.propertyType}'`; }
+        if (params.buildingType && params.buildingType !== 'Any') { filterString += ` and CommonInterest eq '${params.buildingType}'`; }
+        if (params.garage && params.garage !== 'Any') { filterString += ` and ParkingTotal ge ${params.garage}`; }
+        if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
+            const neighborhoodName = params.neighborhood.replace(/'/g, "''");
+            filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
+        }
+        // Date filter applies to all regular searches
+        filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
+
 
         // --- PAGINATION & SINGLE FETCH LOGIC ---
 
