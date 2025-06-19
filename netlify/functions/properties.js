@@ -86,13 +86,13 @@ exports.handler = async function (event) {
             filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
         }
 
-        // Add the date filter only for non-featured searches
-        if (!params.featuredOfficeKey) {
-            filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
-        } else {
-            // For featured office listings, ensure they are also active status
-            filterString += ` and StandardStatus eq 'Active'`;
-        }
+        // // Add the date filter only for non-featured searches
+        // if (!params.featuredOfficeKey) {
+        //     filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
+        // } else {
+        //     // For featured office listings, ensure they are also active status
+        //     filterString += ` and StandardStatus eq 'Active'`;
+        // }
 
         // --- PAGINATION & SINGLE FETCH LOGIC ---
         const ddfPageSize = 100;
