@@ -44,17 +44,19 @@ exports.handler = async function (event) {
         const accessToken = await getAccessToken();
         let filterString = '';
 
-        // --- Step 1: Establish the BASE filter (Office, City, or General Active) ---
+        // --- CORRECTED FILTER LOGIC ---
+
+        // Step 1: Establish the BASE filter (Office, City, or General Active)
         if (params.featuredOfficeKey) {
             filterString = `ListOfficeKey eq '${params.featuredOfficeKey.replace(/'/g, "''")}'`;
         } else if (params.city) {
             filterString = `City eq '${params.city.replace(/'/g, "''")}'`;
         } else {
+            // Default if no other main filter is provided
             filterString = `StandardStatus eq 'Active'`;
         }
 
-        // --- Step 2: ALWAYS append the other filters if they exist ---
-
+        // Step 2: ALWAYS append additional filters from the form
         if (params.minLat && params.minLng && params.maxLat && params.maxLng) {
             filterString += ` and Latitude ge ${params.minLat} and Latitude le ${params.maxLat} and Longitude ge ${params.minLng} and Longitude le ${params.maxLng}`;
         }
@@ -63,6 +65,7 @@ exports.handler = async function (event) {
             if (params.transactionType === 'For Sale') { filterString += ` and ListPrice ne null`; }
             else if (params.transactionType === 'For Rent') { filterString += ` and TotalActualRent ne null`; }
         } else {
+            // Default to for-sale properties if not specified
             filterString += ` and ListPrice ne null`;
         }
 
@@ -81,24 +84,19 @@ exports.handler = async function (event) {
         if (params.propertyType && params.propertyType !== 'Any') { filterString += ` and PropertySubType eq '${params.propertyType}'`; }
         if (params.buildingType && params.buildingType !== 'Any') { filterString += ` and CommonInterest eq '${params.buildingType}'`; }
         if (params.garage && params.garage !== 'Any') { filterString += ` and ParkingTotal ge ${params.garage}`; }
+
         if (params.neighborhood && params.neighborhood !== "" && params.neighborhood.toLowerCase() !== "any" && params.neighborhood.toLowerCase() !== "or select a neighbourhood") {
             const neighborhoodName = params.neighborhood.replace(/'/g, "''");
             filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
         }
 
-        // // Add the date filter only for non-featured searches
-        // if (!params.featuredOfficeKey) {
-        //     filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
-        // } else {
-        //     // For featured office listings, ensure they are also active status
-        //     filterString += ` and StandardStatus eq 'Active'`;
-        // }
+        // Step 3: Append universal status and date filters
+        filterString += ` and StandardStatus eq 'Active'`;
 
-        // --- PAGINATION & SINGLE FETCH LOGIC ---
+        // --- PAGINATION & SINGLE FETCH LOGIC (No changes needed here) ---
         const ddfPageSize = 100;
         const ddfPageToFetch = params.ddfPage ? parseInt(params.ddfPage, 10) : 1;
         const skip = (ddfPageToFetch - 1) * ddfPageSize;
-
         const selectFields = "ListingKey,PropertySubType,CommonInterest,City,Media,ListPrice,BedroomsTotal,BathroomsTotalInteger,UnparsedAddress,StateOrProvince,ListingURL,TotalActualRent,LeaseAmountFrequency,LivingArea,ListAgentKey,ListOfficeKey,OriginalEntryTimestamp,ModificationTimestamp,StatusChangeTimestamp,SubdivisionName";
         let ddfApiUrl = `https://ddfapi.realtor.ca/odata/v1/Property?$filter=${encodeURIComponent(filterString)}&$select=${selectFields}&$orderby=OriginalEntryTimestamp desc&$top=${ddfPageSize}&$skip=${skip}`;
 
@@ -118,7 +116,6 @@ exports.handler = async function (event) {
         const ddfPageData = await propertyResponse.json();
         let fetchedProperties = ddfPageData.value || [];
 
-        // --- SORTING LOGIC FOR FEATURED ---
         const featuredAgentKey = params.featuredAgentKey;
         if (params.featuredOfficeKey && featuredAgentKey && fetchedProperties.length > 0) {
             fetchedProperties.sort((a, b) => {
@@ -130,7 +127,6 @@ exports.handler = async function (event) {
             });
         }
 
-        // --- RESPONSE TO CLIENT ---
         let totalCount = null;
         if (ddfPageToFetch === 1 && ddfPageData['@odata.count']) {
             totalCount = parseInt(ddfPageData['@odata.count'], 10);
@@ -159,6 +155,7 @@ exports.handler = async function (event) {
         };
     }
 };
+
 
 // Function to get detailed property information by ListingKey
 async function getPropertyDetails(listingKey, headers) {
