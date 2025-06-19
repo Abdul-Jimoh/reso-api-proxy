@@ -84,8 +84,7 @@ exports.handler = async function (event) {
                 const neighborhoodName = params.neighborhood.replace(/'/g, "''");
                 filterString += ` and SubdivisionName eq '${neighborhoodName}'`;
             }
-            // Date filter applies to all regular searches
-            filterString += ` and OriginalEntryTimestamp ge 2024-01-01T00:00:00Z`;
+
         }
 
         // --- PAGINATION & SINGLE FETCH LOGIC ---
