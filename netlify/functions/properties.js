@@ -90,7 +90,7 @@ exports.handler = async function (event) {
         }
 
         // Add universal status filter to ensure we only get listings currently on the market.
-        filterParts.push(`StandardStatus eq 'Active'`);
+        // filterParts.push(`StandardStatus eq 'Active'`);
 
         // Finalize filter string
         const filterString = filterParts.join(' and ');
