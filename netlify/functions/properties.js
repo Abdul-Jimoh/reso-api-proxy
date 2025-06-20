@@ -60,16 +60,17 @@ exports.handler = async function (event) {
             // If a type is EXPLICITLY selected (e.g., from radio button), filter by it.
             if (params.transactionType === 'For Sale') { filterParts.push(`ListPrice ne null`); }
             else if (params.transactionType === 'For Rent') { filterParts.push(`TotalActualRent ne null`); }
-        } else {
-            // If NO type is selected, the default behavior depends on the context.
-            if (params.featuredOfficeKey) {
-                // For the initial featured office view, show BOTH for-sale AND for-rent properties.
-                filterParts.push(`(ListPrice ne null or TotalActualRent ne null)`);
-            } else {
-                // For a general search, default to showing only properties FOR SALE.
-                filterParts.push(`ListPrice ne null`);
-            }
-        }
+        } 
+        // else {
+        //     // If NO type is selected, the default behavior depends on the context.
+        //     if (params.featuredOfficeKey) {
+        //         // For the initial featured office view, show BOTH for-sale AND for-rent properties.
+        //         filterParts.push(`(ListPrice ne null or TotalActualRent ne null)`);
+        //     } else {
+        //         // For a general search, default to showing only properties FOR SALE.
+        //         filterParts.push(`ListPrice ne null`);
+        //     }
+        // }
 
         if (params.bedrooms && params.bedrooms !== 'Any') {
             if (params.bedrooms.includes('+')) { filterParts.push(`BedroomsTotal ge ${parseInt(params.bedrooms)}`); }
