@@ -5,8 +5,8 @@ const qs = require('querystring');
 async function getAccessToken() {
     const tokenData = qs.stringify({
         grant_type: 'client_credentials',
-        client_id: process.env.REALTOR_CLIENT_ID || 'hoYRuPpznnXKuroH4jCogKaa',
-        client_secret: process.env.REALTOR_CLIENT_SECRET || 'jwm634mpqMVDaDRsaDW6vysm',
+        client_id: process.env.REALTOR_CLIENT_ID,
+        client_secret: process.env.REALTOR_CLIENT_SECRET,
         scope: 'DDFApi_Read',
     });
     const tokenResponse = await fetch('https://identity.crea.ca/connect/token', {
@@ -167,8 +167,8 @@ async function getPropertyDetails(listingKey, headers) {
         // Get access token
         const tokenData = qs.stringify({
             grant_type: 'client_credentials',
-            client_id: process.env.REALTOR_CLIENT_ID || 'hoYRuPpznnXKuroH4jCogKaa',
-            client_secret: process.env.REALTOR_CLIENT_SECRET || 'jwm634mpqMVDaDRsaDW6vysm',
+            client_id: process.env.REALTOR_CLIENT_ID,
+            client_secret: process.env.REALTOR_CLIENT_SECRET,
             scope: 'DDFApi_Read',
         });
 
